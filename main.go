@@ -1,8 +1,11 @@
 package main
 
-import webview "github.com/webview/webview_go"
+import (
+	webview "github.com/webview/webview_go"
+)
 
 func main() {
+	InitDb()
 	debug := true
 	w := webview.New(debug)
 	w.SetTitle("Training Tool")
