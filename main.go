@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
 	"log"
+	"net/http"
 	"strconv"
 	"time"
 
@@ -90,7 +92,7 @@ func GetAll() []training {
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Printf("id : %d name : %s", id, name)
+		// fmt.Printf("id : %d name : %s", id, name)
 		t_list = append(t_list, training{
 			Id:   id,
 			Name: name,
@@ -147,7 +149,7 @@ func GetTrainininEvolution(id int) []training_evolution {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println(evo)
+		// fmt.Println(evo)
 		list = append(list, evo)
 	}
 	return list
@@ -168,13 +170,92 @@ func InsertEvo(id int, value int) []training_evolution {
 
 	return GetTrainininEvolution(id)
 }
+type DataPoint struct {
+	X float64 // Index de l'entraînement (1, 2, 3...)
+	Y float64 // Valeur (kg, reps...)
+}
 
+func PredictNextValue(points []DataPoint) float64 {
+	n := float64(len(points))
+	if n < 2 {
+		return 0 // Pas assez de données pour prédire
+	}
+
+	var sumX, sumY, sumXY, sumX2 float64
+	for _, p := range points {
+		sumX += p.X
+		sumY += p.Y
+		sumXY += p.X * p.Y
+		sumX2 += p.X * p.X
+	}
+	// Calcul de la pente (a)
+	a := (n*sumXY - sumX*sumY) / (n*sumX2 - sumX*sumX)
+
+	// Calcul de l'ordonnée à l'origine (b)
+	b := (sumY - a*sumX) / n
+
+	// Prédire le point suivant (n + 1)
+	nextX := n + 1
+	return a*nextX + b
+}
+func GetPrediction(trainingID int) (float64, error) {
+	db, err := sql.Open("sqlite", "database.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+    // 1. Récupérer les données historiques
+    rows, err := db.Query(`
+        SELECT value 
+        FROM training_evolution 
+        WHERE training_id = ? 
+        ORDER BY training_date ASC`, 
+        trainingID,
+    )
+    if err != nil {
+        return 0, err
+    }
+    defer rows.Close()
+
+    var points []DataPoint
+    index := 1.0
+    for rows.Next() {
+        var val float64
+        if err := rows.Scan(&val); err != nil {
+            return 0, err
+        }
+        // X = l'ordre de la séance (1, 2, 3...), Y = la performance
+        points = append(points, DataPoint{X: index, Y: val})
+        index++
+    }
+
+    // 2. Calculer la prédiction si on a assez de données
+    if len(points) < 3 {
+        return 0, nil // Pas assez de recul pour une prédiction fiable
+    }
+
+    return PredictNextValue(points), nil
+}
+
+//go:embed ui-dist/*
+var assets embed.FS
 func main() {
 	debug := true
 	w := webview.New(debug)
 	w.SetTitle("Training Tool")
 	w.SetSize(800, 600, webview.HintNone)
-	w.Navigate("http://localhost:5173")
+	go func() {
+		fs := http.FileServer(http.FS(assets))
+        http.ListenAndServe(":8080", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+            // Optionnel : rediriger toutes les routes vers index.html pour le SPA Routing
+            r.URL.Path = "/ui-dist" + r.URL.Path
+			fmt.Println(r.URL.Path)
+            fs.ServeHTTP(w, r)
+        }))
+	}()
+	w.Navigate("http://localhost:8080")
+
+
 	w.Bind("insertTraining", func(data string) []training {
 		InsertTraining(data)
 		return GetAll()
@@ -203,6 +284,11 @@ func main() {
 		e_id, _ := strconv.Atoi(id)
 		DeleteEvo(e_id)
 		return GetTrainininEvolution(t_id)
+	})
+	w.Bind("predictNextValue", func (id string) float64 {
+		intId, _ := strconv.Atoi(id)
+		next, _ :=GetPrediction(intId)
+		return next
 	})
 	w.Run()
 	InitDb()

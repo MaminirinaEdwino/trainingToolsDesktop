@@ -1,38 +1,30 @@
 import './App.css'
 import TrainingList from './components/layouts/trainingList'
-import {createBrowserRouter, RouterProvider, useLocation} from 'react-router-dom'
 import Training from './components/layouts/trainingPage'
-import { useEffect } from 'react'
-function FlyonUIInitializer() {
-  const location = useLocation();
+import { useEffect, useState } from 'react'
 
-  useEffect(() => {
-    const loadFlyon = async () => {
-      // Import dynamique pour éviter les soucis au build
-      const { HSStaticMethods } = await import("flyonui/flyonui");
-      HSStaticMethods.autoInit();
-    };
-    loadFlyon();
-  }, [location.pathname]);
-
-  return null; // Il ne rend rien visuellement
-}
 function App() {
-  const router = createBrowserRouter([
-    {
-      path: "/",
-      element: <TrainingList flyReset={FlyonUIInitializer}/>
-    },
-    {
-      path: "/training/:id/:name",
-      element: <Training flyreset={FlyonUIInitializer}/>
-    }
-  ])
- 
-  return (
-    
-    <RouterProvider router={router}/>
-  )
+  const [actualWindow, setWindow] = useState({ view: "/", params: null })
+  const navigate = (route, params) => {
+    setWindow({ view: route, params: params })
+  }
+  const FlyonUIInitializer = () => {
+    useEffect(() => {
+      const loadFlyon = async () => {
+        const { HSStaticMethods } = await import("flyonui/flyonui");
+        HSStaticMethods.autoInit();
+      };
+      loadFlyon();
+    }, []);
+
+    return null; // Il ne rend rien visuellement
+  }
+  const windowList = {
+    "/": (<TrainingList flyReset={FlyonUIInitializer} navigate={navigate} />),
+    "/training": <Training flyreset={FlyonUIInitializer} navigate={navigate} params={actualWindow.params} />
+  }
+
+  return windowList[actualWindow.view]
 }
 
 export default App
