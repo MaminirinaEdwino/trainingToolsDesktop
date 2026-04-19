@@ -18,7 +18,7 @@ type training struct {
 
 type training_evolution struct {
 	Id            int       `json:"id"`
-	Training      string  `json:"training"`
+	Training      string    `json:"training"`
 	Value         int       `json:"value"`
 	Training_date time.Time `json:"date"`
 }
@@ -192,7 +192,7 @@ func main() {
 		Delete(id)
 		return GetAll()
 	})
-	w.Bind("insertEvolution", func (id string, value string) []training_evolution {
+	w.Bind("insertEvolution", func(id string, value string) []training_evolution {
 		idValue, _ := strconv.Atoi(id)
 		intValue, _ := strconv.Atoi(value)
 		return InsertEvo(idValue, intValue)

@@ -1,19 +1,34 @@
 import './App.css'
 import TrainingList from './components/layouts/trainingList'
-import {createBrowserRouter, RouterProvider} from 'react-router-dom'
+import {createBrowserRouter, RouterProvider, useLocation} from 'react-router-dom'
 import Training from './components/layouts/trainingPage'
-import "../node_modules/flyonui/dist/index"
+import { useEffect } from 'react'
+function FlyonUIInitializer() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const loadFlyon = async () => {
+      // Import dynamique pour éviter les soucis au build
+      const { HSStaticMethods } = await import("flyonui/flyonui");
+      HSStaticMethods.autoInit();
+    };
+    loadFlyon();
+  }, [location.pathname]);
+
+  return null; // Il ne rend rien visuellement
+}
 function App() {
   const router = createBrowserRouter([
     {
       path: "/",
-      element: <TrainingList/>
+      element: <TrainingList flyReset={FlyonUIInitializer}/>
     },
     {
-      path: "/training/:id",
-      element: <Training/>
+      path: "/training/:id/:name",
+      element: <Training flyreset={FlyonUIInitializer}/>
     }
   ])
+ 
   return (
     
     <RouterProvider router={router}/>

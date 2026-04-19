@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import Header from "../header";
 
 
-export default function TrainingList() {
+export default function TrainingList( {flyReset} ) {
     const [list, setLIst] = useState([])
     const get_list = async () => {
         await window.getTraining().then((response) => {
@@ -25,8 +25,11 @@ export default function TrainingList() {
     useEffect(() => {
         get_list()
     }, [])
+
+    flyReset()
     return <div>
         <Header></Header>
+        
         <div className="accordion divide-neutral/20 divide-y">
             <div className="accordion-item active" id="payment-basic">
                 <button className="accordion-toggle inline-flex items-center gap-x-4 text-start" aria-controls="payment-basic-collapse" aria-expanded="true" >
@@ -42,9 +45,10 @@ export default function TrainingList() {
                 </div>
             </div>
         </div>
+        <span class="icon-[ic--sharp-account-circle] size-10"></span>
         {list.map((el) => <div >
             {el.name} <button onClick={() => handleDelete(el.id)}>Delete</button>
-            <a href={"/training/"+el.id}>View</a>
+            <a href={"/training/"+el.id+"/"+el.name}>View</a> 
         </div>)}
     </div>
 }
