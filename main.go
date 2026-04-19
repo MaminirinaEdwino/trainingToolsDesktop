@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -24,9 +25,9 @@ type training_evolution struct {
 	Value         int       `json:"value"`
 	Training_date time.Time `json:"date"`
 }
-
+var databaseDir string = GetHomeDir()+"/training.db"
 func InitDb() {
-	db, err := sql.Open("sqlite", "database.db")
+	db, err := sql.Open("sqlite", databaseDir)
 	if err != nil {
 		log.Fatal("erreur db")
 	}
@@ -60,7 +61,7 @@ CREATE TABLE IF NOT EXISTS training_evolution (
 }
 
 func InsertTraining(data string) error {
-	db, err := sql.Open("sqlite", "database.db")
+	db, err := sql.Open("sqlite", databaseDir)
 	if err != nil {
 		log.Fatal("erreur db")
 	}
@@ -77,7 +78,7 @@ func InsertTraining(data string) error {
 
 func GetAll() []training {
 	t_list := []training{}
-	db, err := sql.Open("sqlite", "database.db")
+	db, err := sql.Open("sqlite", databaseDir)
 	if err != nil {
 		log.Fatal("erreur db")
 	}
@@ -101,7 +102,7 @@ func GetAll() []training {
 	return t_list
 }
 func Delete(id int) bool {
-	db, err := sql.Open("sqlite", "database.db")
+	db, err := sql.Open("sqlite", databaseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -116,7 +117,7 @@ func Delete(id int) bool {
 	return true
 }
 func DeleteEvo(id int) bool {
-	db, err := sql.Open("sqlite", "database.db")
+	db, err := sql.Open("sqlite", databaseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -132,7 +133,7 @@ func DeleteEvo(id int) bool {
 }
 
 func GetTrainininEvolution(id int) []training_evolution {
-	db, err := sql.Open("sqlite", "database.db")
+	db, err := sql.Open("sqlite", databaseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -156,7 +157,7 @@ func GetTrainininEvolution(id int) []training_evolution {
 }
 
 func InsertEvo(id int, value int) []training_evolution {
-	db, err := sql.Open("sqlite", "database.db")
+	db, err := sql.Open("sqlite", databaseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -199,7 +200,7 @@ func PredictNextValue(points []DataPoint) float64 {
 	return a*nextX + b
 }
 func GetPrediction(trainingID int) (float64, error) {
-	db, err := sql.Open("sqlite", "database.db")
+	db, err := sql.Open("sqlite", databaseDir)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -239,7 +240,13 @@ func GetPrediction(trainingID int) (float64, error) {
 
 //go:embed ui-dist/*
 var assets embed.FS
+func GetHomeDir() string {
+	home, _ := os.UserHomeDir()
+	return home
+}
 func main() {
+
+	InitDb()
 	debug := true
 	w := webview.New(debug)
 	w.SetTitle("Training Tool")
@@ -291,5 +298,4 @@ func main() {
 		return next
 	})
 	w.Run()
-	InitDb()
 }
