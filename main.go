@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"strconv"
 	"time"
 
 	webview "github.com/webview/webview_go"
@@ -17,7 +18,7 @@ type training struct {
 
 type training_evolution struct {
 	Id            int       `json:"id"`
-	Training      training  `json:"training"`
+	Training      string  `json:"training"`
 	Value         int       `json:"value"`
 	Training_date time.Time `json:"date"`
 }
@@ -112,6 +113,21 @@ func Delete(id int) bool {
 	}
 	return true
 }
+func DeleteEvo(id int) bool {
+	db, err := sql.Open("sqlite", "database.db")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	sqlStmt := fmt.Sprintf("DELETE FROM training_evolution WHERE id = %d", id)
+	_, err = db.Exec(sqlStmt)
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+	return true
+}
 
 func GetTrainininEvolution(id int) []training_evolution {
 	db, err := sql.Open("sqlite", "database.db")
@@ -120,16 +136,16 @@ func GetTrainininEvolution(id int) []training_evolution {
 	}
 	defer db.Close()
 	list := []training_evolution{}
-	sqlStmt := fmt.Sprintf("SELECT e.*, t.name as training FROM training_evolution as e INNER JOIN training as t ON e.training_id = t.id WHERE e.id = %d", id)
+	sqlStmt := fmt.Sprintf("SELECT e.id as id, e.training_date as training_date, e.value as value, t.name as training FROM training_evolution as e INNER JOIN training as t ON e.training_id = t.id WHERE t.id = %d", id)
 	rows, err := db.Query(sqlStmt)
 	if err != nil {
 		log.Fatal(err)
 	}
 	for rows.Next() {
 		var evo training_evolution
-		err := rows.Scan(&evo.Id, &evo.Training, &evo.Value, &evo.Training_date)
+		err := rows.Scan(&evo.Id, &evo.Training_date, &evo.Value, &evo.Training)
 		if err != nil {
-			log.Fatal(err)
+			fmt.Println(err)
 		}
 		fmt.Println(evo)
 		list = append(list, evo)
@@ -166,20 +182,27 @@ func main() {
 	w.Bind("getTraining", func() []training {
 		return GetAll()
 	})
-	w.Bind("getTrainingEvolution", func(id int) []training_evolution {
+	w.Bind("getTrainingEvolution", func(id string) []training_evolution {
+		intValue, _ := strconv.Atoi(id)
 		fmt.Println("get training evolution")
-		return GetTrainininEvolution(id)
+		return GetTrainininEvolution(intValue)
 	})
 	w.Bind("deleteTraining", func(id int) []training {
 		fmt.Println("delete")
 		Delete(id)
 		return GetAll()
 	})
-	w.Bind("insertEvolution", func (id int, value int) []training_evolution {
-		return InsertEvo(id, value)
+	w.Bind("insertEvolution", func (id string, value string) []training_evolution {
+		idValue, _ := strconv.Atoi(id)
+		intValue, _ := strconv.Atoi(value)
+		return InsertEvo(idValue, intValue)
 	})
-	w.Bind("deleteTrainingEvolution", func() {
+	w.Bind("deleteTrainingEvolution", func(id string, training_id string) []training_evolution {
 		fmt.Println("delete evo")
+		t_id, _ := strconv.Atoi(training_id)
+		e_id, _ := strconv.Atoi(id)
+		DeleteEvo(e_id)
+		return GetTrainininEvolution(t_id)
 	})
 	w.Run()
 	InitDb()
