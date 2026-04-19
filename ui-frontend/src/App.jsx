@@ -1,14 +1,22 @@
 import './App.css'
-import Header from './components/header'
-import SideBar from './components/sideBar'
-
+import TrainingList from './components/layouts/trainingList'
+import {createBrowserRouter, RouterProvider} from 'react-router-dom'
+import Training from './components/layouts/trainingPage'
+import "../node_modules/flyonui/dist/index"
 function App() {
-
+  const router = createBrowserRouter([
+    {
+      path: "/",
+      element: <TrainingList/>
+    },
+    {
+      path: "/training/:id",
+      element: <Training/>
+    }
+  ])
   return (
-    <>
-    <Header></Header>
-    <SideBar></SideBar>
-    </>
+    
+    <RouterProvider router={router}/>
   )
 }
 
